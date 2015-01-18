@@ -1,0 +1,81 @@
+<html>
+<head>
+  <title>Test getUserMedia</title>
+  <style>
+    #display {
+      margin: 20px 45px;
+    }
+    
+    .video {
+      width: 320px;
+      height: 240px;
+      border: 1px solid #666666;
+    }
+    
+    #control {
+      margin: 0 45px;
+    }
+
+    .button {
+      height: 34px;
+      padding: 0 20px;
+      margin: 0 2px;
+      color: #ffffff;
+      border: none;
+      border-radius: 2px;
+      font-size: 14px;
+    }
+    
+    .button:hover {
+      cursor: pointer;
+    }
+    
+    .primary-button {
+      background-color: #72b7fd;
+    }
+    
+    .important-button {
+      background-color: #ff7373;
+    }
+  </style>
+</head>
+<body>
+  <div id="display">
+    <video id="video" class="video" autoplay></video>
+  </div>
+  <div id="control">
+    <button id="start" class="button primary-button">Start</button>
+    <button id="stop" class="button important-button">Stop</button>
+  </div>
+  <script type="text/javascript" src="vendor/jquery.min.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      'use strict'
+
+      navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia
+
+      var handleError = function(err) {
+        console.error(err)
+      }
+      var mediaStream = null
+      var video = null
+
+      $('#start').click(function() {
+        console.log('start')
+        navigator.getUserMedia({ video: true }, function(stream) {
+          console.log('Got stream')
+          console.log(stream)
+          mediaStream = stream
+          var video = document.getElementById('video')
+          video.src = URL.createObjectURL(stream)
+        }, handleError)
+      })
+
+      $('#stop').click(function() {
+        console.log('stop')
+        mediaStream.getVideoTracks()[0].stop()
+      })
+    })
+  </script>
+</body>
+</html>
