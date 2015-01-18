@@ -1,0 +1,232 @@
+<html>
+<head>
+  <title>Test RTCPeerConnection</title>
+  <style>
+    #display {
+      margin: 20px 45px;
+    }
+    
+    .video {
+      width: 320px;
+      height: 240px;
+      border: 1px solid #666666;
+    }
+    
+    #control {
+      margin: 0 45px;
+    }
+
+    .button {
+      height: 34px;
+      padding: 0 20px;
+      margin: 0 2px;
+      color: #ffffff;
+      border: none;
+      border-radius: 2px;
+      font-size: 14px;
+    }
+    
+    .button:hover {
+      cursor: pointer;
+    }
+    
+    .primary-button {
+      background-color: #72b7fd;
+    }
+    
+    .important-button {
+      background-color: #ff7373;
+    }
+  </style>
+</head>
+<body>
+  <div id="display">
+    <video id="localVideo" class="video" autoplay muted></video>
+    <video id="remoteVideo" class="video" autoplay></video>
+  </div>
+  <div id="control">
+    <button id="call" class="button primary-button">Call</button>
+    <button id="hangup" class="button important-button">Hang up</button>
+  </div>
+  <script type="text/javascript" src="vendor/jquery.min.js"></script>
+  <script type="text/javascript" src="https://xonnect.io/cdn/xonnect.min.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      'use strict'
+      
+      // shims
+      var PeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection
+      var IceCandidate = window.RTCIceCandidate || window.webkitRTCIceCandidate || window.mozRTCIceCandidate
+      var SessionDescription =  window.RTCSessionDescription || window.webkitRTCSessionDescription || window.mozRTCSessionDescription
+      navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia
+      
+      // signaling channel
+      var room = null
+      var xonnect = new Xonnect('your-own-account', { group: 'webrtc' })
+      xonnect.connected = function() {
+        console.log('connected')
+        room = xonnect.channel('room', 'public')  
+        room.received = route
+      }
+
+      // useful variables
+      var ice = {
+        iceServers: [
+          //{url: 'stun:stun.voipstunt.com'}
+        ]
+      }
+      var options = {
+        optional: [
+          {DtlsSrtpKeyAgreement: true},
+          {RtpDataChannels: true}
+        ]
+      }
+      var handleSuccess = function() {
+        //...
+      }
+      var handleError = function(err) {
+        console.error(err)
+      }
+      var constraints = {
+        mandatory: {
+          OfferToReceiveAudio: false,
+          OfferToReceiveVideo: true
+        }
+      }
+      var localVideo = document.getElementById('localVideo')
+      var remoteVideo = document.getElementById('remoteVideo')
+      var localStream = null
+      var pc = null
+      var setRemote = false
+      var candidateBuffer = []
+
+      // initialize media and peer
+      var start = function(callback) {
+        pc = new PeerConnection(ice, options)
+
+        pc.onicecandidate = function(evt) {
+          if (evt.candidate) {
+            console.log('Local candidate:')
+            console.log(evt.candidate)
+            room.send({
+              type: 'candidate',
+              data: evt.candidate
+            })
+          }
+        }
+      
+        pc.onaddstream = function(evt) {
+          if (evt.stream) {
+            console.log('Got remote stream')
+            console.log(evt.stream)
+            remoteVideo.src = URL.createObjectURL(evt.stream)
+          }
+        }
+
+        navigator.getUserMedia({ audio: false, video: true }, function(stream) {
+          console.log('Got local stream')
+          console.log(stream)
+          localStream = stream
+          localVideo.src = URL.createObjectURL(stream)
+
+          // add stream first then create offers/answers
+          pc.addStream(localStream)
+
+          callback()
+        }, handleError)
+      }
+
+      // stop all
+      var clean = function() {
+        localStream.getVideoTracks()[0].stop()
+        localStream = null
+        pc.close()
+        pc = null
+        setRemote = false
+        candidateBuffer = []
+      }
+      
+      // click handlers
+      $('#call').click(function() {
+        start(function() {
+          pc.createOffer(function(offer) {
+            console.log('Local offer:')
+            console.log(offer)
+            pc.setLocalDescription(offer, handleSuccess, handleError)
+            room.send({
+              type: 'offer',
+              data: offer
+            })
+          }, handleError, constraints)
+        })
+      })
+
+      $('#hangup').click(function() {
+        clean()
+        room.send({
+          type: 'hangup'
+        })
+      })
+
+      // route
+      var route = function(message) {
+        if (message.type == 'offer') {
+          start(function() {
+            var offer = new SessionDescription(message.data)
+            console.log('Remote offer:')
+            console.log(offer)
+            pc.setRemoteDescription(offer, handleSuccess, handleError)
+            setRemote = true
+
+            for (var i = 0, j = candidateBuffer.length; i < j; i++) {
+              console.log('Adding candidate')
+              pc.addIceCandidate(candidateBuffer[i], handleSuccess, handleError)
+            }
+            candidateBuffer = []
+            
+            pc.createAnswer(function(answer) {
+              pc.setLocalDescription(answer)
+              console.log('Local answer:')
+              console.log(answer)
+              room.send({
+                type: 'answer',
+                data: answer
+              })
+            }, handleError, constraints)
+          })
+
+        } else if (message.type == 'answer') {
+          var answer = new SessionDescription(message.data)
+          console.log('Remote answer:')
+          console.log(answer)
+          pc.setRemoteDescription(answer, handleSuccess, handleError)
+          setRemote = true
+
+          for (var i = 0, j = candidateBuffer.length; i < j; i++) {
+            console.log('Adding candidate')
+            pc.addIceCandidate(candidateBuffer[i], handleSuccess, handleError)
+          }
+          candidateBuffer = []
+
+        } else if (message.type == 'candidate') {
+          var candidate = new RTCIceCandidate(message.data)
+          console.log('Remote candidate:')
+          console.log(candidate)
+
+          if (!setRemote) {
+            console.log('Buffering candidate')
+            candidateBuffer.push(candidate)
+            return
+          }
+
+          console.log('Adding candidate')
+          pc.addIceCandidate(candidate, handleSuccess, handleError)
+
+        } else if (message.type == 'hangup') {
+          clean()
+        }
+      }
+    })
+  </script>
+</body>
+</html>
