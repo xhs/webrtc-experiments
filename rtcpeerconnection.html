@@ -65,6 +65,9 @@
       var xonnect = new Xonnect('your-own-account', { group: 'webrtc' })
       xonnect.connected = function() {
         console.log('connected')
+
+        callButton.disabled = false
+
         room = xonnect.channel('room', 'public')  
         room.received = route
       }
@@ -95,6 +98,10 @@
       }
       var localVideo = document.getElementById('localVideo')
       var remoteVideo = document.getElementById('remoteVideo')
+      var callButton = document.getElementById('call')
+      callButton.disabled = true
+      var hangupButton = document.getElementById('hangup')
+      hangupButton.disabled = true
       var localStream = null
       var pc = null
       var setRemote = false
@@ -148,6 +155,9 @@
       
       // click handlers
       $('#call').click(function() {
+        callButton.disabled = true
+        hangupButton.disabled = false
+
         start(function() {
           pc.createOffer(function(offer) {
             console.log('Local offer:')
@@ -162,6 +172,9 @@
       })
 
       $('#hangup').click(function() {
+        callButton.disabled = false
+        hangupButton.disabled = true
+
         clean()
         room.send({
           type: 'hangup'
