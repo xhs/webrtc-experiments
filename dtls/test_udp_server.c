@@ -1,6 +1,7 @@
 // gcc -o test_udp_server test_udp_server.c
 
 #include <sys/poll.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -11,6 +12,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
+int sockfd;
+
+static void handle_signal(int signo) {
+  close(sockfd);
+  exit(1);
+}
 
 const char *usage =
 "usage:\n"
@@ -24,7 +32,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  int ecode, sockfd, numbytes, n;
+  signal(SIGINT, handle_signal);
+
+  int ecode, numbytes, n;
   struct addrinfo hints, *servinfo, *p;
   struct pollfd ufds[1];
 
@@ -63,20 +73,23 @@ int main(int argc, char *argv[]) {
 
   freeaddrinfo(servinfo);
 
-  n = poll(ufds, 1, -1);
-  if (n == -1) {
-    fprintf(stderr, "poll error\n");
-  } else if (n == 0) {
-    fprintf(stderr, "unlikely\n");
-  } else {
-    if (ufds[0].revents & POLLIN) {
-      numbytes = recv(sockfd, buf, sizeof buf, 0);
-      buf[numbytes] = 0;
-      printf("received: %s\n", buf);
+  while (1) {
+    n = poll(ufds, 1, -1);
+
+    if (n == -1) {
+      fprintf(stderr, "poll error\n");
+      break;
+    } else if (n == 0) {
+      fprintf(stderr, "unlikely\n");
+      break;
+    } else {
+      if (ufds[0].revents & POLLIN) {
+        numbytes = recv(sockfd, buf, sizeof buf, 0);
+        buf[numbytes] = 0;
+        printf("received: %s\n", buf);
+      }
     }
   }
-
-  close(sockfd);
 
   return 0;
 }
