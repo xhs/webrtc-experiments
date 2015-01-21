@@ -4,8 +4,12 @@ from bottle import Bottle, static_file, run
 
 app = Bottle()
 
+@app.route('/lab/datachannel')
+def datachannel():
+  return static_file('rtcdatachannel.html', root='./')
+
 @app.route('/lab/videochat')
-def peer():
+def videochat():
   return static_file('rtcpeerconnection.html', root='./')
 
 @app.route('/lab/vendor/<filepath:path>')
