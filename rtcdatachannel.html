@@ -9,8 +9,7 @@
       var config = null
       var options = {
         optional: [
-          {DtlsSrtpKeyAgreement: true},
-          {RtpDataChannels: true}
+          {DtlsSrtpKeyAgreement: true}//, {RtpDataChannels: true}
         ]
       }
 
@@ -25,20 +24,23 @@
 
       localPeer.onicecandidate = function(evt) {
         if (evt.candidate) {
-          console.log('Local ICE candidate event:\n' + JSON.stringify(evt.candidate))
+          console.log('Local ICE candidate')
+          console.log(evt.candidate)
           remotePeer.addIceCandidate(evt.candidate)
         }
       }
 
       remotePeer.onicecandidate = function(evt) {
         if (evt.candidate) {
-          console.log('Remote ICE candidate event:\n' + JSON.stringify(evt.candidate))
+          console.log('Remote ICE candidate')
+          console.log(evt.candidate)
           localPeer.addIceCandidate(evt.candidate)
         }
       }
 
       remotePeer.ondatachannel = function(evt) {
-        console.log('Channel event:\n' + JSON.stringify(evt.channel))
+        console.log('Channel event')
+        console.log(evt)
         var ch = evt.channel
         ch.onopen = function() {
           console.log('Remote channel opened')
@@ -49,11 +51,13 @@
       }
 
       localPeer.createOffer(function(offer) {
-        console.log('Local Offer:\n' + JSON.stringify(offer.sdp))
+        console.log('Local Offer:')
+        console.log(offer)
         localPeer.setLocalDescription(offer)
         remotePeer.setRemoteDescription(offer)
         remotePeer.createAnswer(function(answer) {
-          console.log('Remote Answer:\n' + JSON.stringify(answer.sdp))
+          console.log('Remote Answer:')
+          console.log(answer)
           remotePeer.setLocalDescription(answer)
           localPeer.setRemoteDescription(answer)
         })
