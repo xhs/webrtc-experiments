@@ -1,3 +1,5 @@
+// gcc -DCYASSL_DTLS -o cyassl_dtls_client cyassl_dtls_client.c `pkg-config --cflags --libs cyassl`
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
