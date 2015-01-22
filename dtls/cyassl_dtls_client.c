@@ -27,7 +27,7 @@ int open_udp_socket(const char *address, const char *port) {
   
   if ((ecode = getaddrinfo(address, port, &hints, &servinfo)) != 0) {
     fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(ecode));
-    return 1;
+    return -1;
   }
 
   memset(&server_addr, 0, sizeof server_addr);
@@ -47,7 +47,7 @@ int open_udp_socket(const char *address, const char *port) {
 
   if (p == NULL) {
     fprintf(stderr, "network error\n");
-    return 1;
+    return -1;
   }
 
   freeaddrinfo(servinfo);
@@ -77,14 +77,14 @@ CYASSL_CTX *init_ssl_context(const char *cert, const char *key) {
 int main(int argc, char *argv[]) {
   if (argc != 3) {
     fprintf(stderr, "usage: %s address port\n", argv[0]);
-    return 1;
+    return -1;
   }
 
   CYASSL_CTX *ctx = init_ssl_context("./test.crt", "./test.key");
-  assert(ctx);
+  assert(ctx != NULL);
 
   int sd = open_udp_socket(argv[1], argv[2]);
-  assert(sd);
+  assert(sd > 0);
 
   //CyaSSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, 0);
   CYASSL *ssl = CyaSSL_new(ctx);
