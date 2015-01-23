@@ -17,9 +17,10 @@
 
 static GMainLoop *gloop;
 static gboolean controlling;
-static gboolean exit_thread, candidate_gathering_done, negotiation_done;
-static GMutex gather_mutex, negotiate_mutex;
-static GCond gather_cond, negotiate_cond;
+static gboolean exit_thread;
+static gboolean candidate_gathering_done, negotiation_done, handshake_done;
+static GMutex gather_mutex, negotiate_mutex, handshake_mutex;
+static GCond gather_cond, negotiate_cond, handshake_cond;
 
 static void
 candidate_gathering_done_cb(NiceAgent *agent, guint stream_id,
@@ -92,17 +93,10 @@ ice_thread(gpointer data)
 
   gchar *sdp = nice_agent_generate_local_sdp(agent);
   printf("local sdp:\n%s\n", sdp);
-  
   gchar *sdp64 = g_base64_encode((const guchar *)sdp, strlen(sdp));
   printf("base64 encoded local sdp:\n%s\n\n", sdp64);
-
   g_free(sdp);
   g_free(sdp64);
-
-  sdp = nice_agent_generate_local_sdp (agent);
-  sdp64 = g_base64_encode ((const guchar *)sdp, strlen (sdp));
-  g_free (sdp);
-  g_free (sdp64);
 
   GIOChannel *io_stdin = g_io_channel_unix_new(fileno(stdin));
   g_io_channel_set_flags(io_stdin, G_IO_FLAG_NONBLOCK, NULL);
@@ -169,6 +163,14 @@ l_cleanup:
   return NULL;
 }
 
+static gpointer
+dtls_thread(gpointer data)
+{
+
+
+  return NULL;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -195,6 +197,7 @@ main(int argc, char *argv[])
   exit_thread = FALSE;
   candidate_gathering_done = FALSE;
   negotiation_done = FALSE;
+  handshake_done = FALSE;
   GThread *gicethread = g_thread_new("ice thread", &ice_thread, NULL);
   g_main_loop_run(gloop);
   exit_thread = TRUE;
