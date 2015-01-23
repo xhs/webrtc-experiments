@@ -13,7 +13,6 @@
 #include <assert.h>
 
 #include <cyassl/ssl.h>
-#include <cyassl/test.h>
 
 struct sockaddr_in server_addr;
 int on = 1;
