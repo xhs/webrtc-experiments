@@ -153,30 +153,6 @@ ice_thread(gpointer data)
 
   fprintf(stderr, "[ice] parsed remote sdp\n");
 
-  // g_mutex_lock(&negotiate_mutex);
-  // while (!exit_thread && !candidate_negotiation_done)
-  //   g_cond_wait(&negotiate_cond, &negotiate_mutex);
-  // g_mutex_unlock(&negotiate_mutex);
-
-  // fprintf(stderr, "[ice] candidate negotiate done\n");
-
-  // g_mutex_lock(&socket_ready_mutex);
-  // while (!exit_thread && !socket_ready)
-  //   g_cond_wait(&socket_ready_cond, &socket_ready_mutex);
-  // g_mutex_unlock(&socket_ready_mutex);
-
-  // fprintf(stderr, "[ice] socket ready\n");
-
-  // g_mutex_lock(&dtls_ready_mutex);
-  // while (!exit_thread && !dtls_ready)
-  //   g_cond_wait(&dtls_ready_cond, &dtls_ready_mutex);
-  // g_mutex_unlock(&dtls_ready_mutex);
-
-  // fprintf(stderr, "[ice] dtls ready\n");
-
-  // if (exit_thread)
-  //   goto l_cleanup;
-
   struct pollfd fds[2];
   fds[0].fd = outsocket_pipe[incoming];
   fds[0].events = POLLIN;
@@ -191,7 +167,7 @@ ice_thread(gpointer data)
       fprintf(stderr, "poll error\n");
     } else if (rc > 0) {
       if (fds[0].revents & POLLIN) {
-        fprintf(stderr, "[ice] received encrypted data from translator\n");
+        fprintf(stderr, "[ice] received encrypted data from socket\n");
         int nbytes = read(outsocket_pipe[incoming], buf, sizeof buf);
         if (nbytes > 0)
           nice_agent_send(agent, stream_id, 1, nbytes, buf);
@@ -220,7 +196,7 @@ ice_thread(gpointer data)
       break;
     }
 
-    int rc = poll(fds, 1, 100);
+    int rc = poll(fds, 2, 100);
     if (rc < 0) {
       fprintf(stderr, "poll error\n");
     } else if (rc > 0) {
@@ -464,7 +440,7 @@ dtls_thread(gpointer data)
 }
 
 static gpointer
-translator_thread(gpointer data)
+socket_thread(gpointer data)
 {
   int sd;
   memset(&socket_addr, 0, sizeof socket_addr);
@@ -496,9 +472,9 @@ translator_thread(gpointer data)
   g_mutex_unlock(&socket_ready_mutex);
 
   if (controlling)
-    fprintf(stderr, "[translator] ready as a server\n");
+    fprintf(stderr, "[socket] ready as a server\n");
   else
-    fprintf(stderr, "[translator] ready as a client\n");
+    fprintf(stderr, "[socket] ready as a client\n");
 
   while (!exit_thread) {
     int rc = poll(fds, 2, -1);
@@ -509,13 +485,13 @@ translator_thread(gpointer data)
     } else {
       if (fds[0].revents & POLLIN) {
         int nbytes = read(insocket_pipe[incoming], buf, sizeof buf);
-        fprintf(stderr, "[translator] received encrypted data from ice\n");
+        fprintf(stderr, "[socket] received encrypted data from ice\n");
         if (nbytes > 0)
           sendto(sd, buf, nbytes, 0, (const struct sockaddr*)&dtls_addr, sizeof dtls_addr);
       }
 
       if (fds[1].revents & POLLIN) {
-        fprintf(stderr, "[translator] received encrypted data from dtls\n");
+        fprintf(stderr, "[socket] received encrypted data from dtls\n");
         struct sockaddr dummyaddr;
         socklen_t dummylen = sizeof dummyaddr;
 
@@ -564,7 +540,7 @@ main(int argc, char *argv[])
     g_error("unable to open pipe");
 
   CyaSSL_Init();
-  CyaSSL_Debugging_ON();
+  //CyaSSL_Debugging_ON();
 
   gloop = g_main_loop_new(NULL, FALSE);
 
@@ -576,13 +552,13 @@ main(int argc, char *argv[])
   dtls_handshake_done = FALSE;
   GThread *gthread_ice = g_thread_new("ice thread", &ice_thread, NULL);
   GThread *gthread_dtls = g_thread_new("dtls thread", &dtls_thread, NULL);
-  GThread *gthread_translator = g_thread_new("translator thread", &translator_thread, NULL);
+  GThread *gthread_socket = g_thread_new("socket thread", &socket_thread, NULL);
   g_main_loop_run(gloop);
   exit_thread = TRUE;
 
   g_thread_join(gthread_ice);
   g_thread_join(gthread_dtls);
-  g_thread_join(gthread_translator);
+  g_thread_join(gthread_socket);
   g_main_loop_unref(gloop);
 
   return EXIT_SUCCESS;
