@@ -48,6 +48,41 @@ struct __attribute__((packed, aligned(1))) webrtc_dcep_ack_message {
   uint8_t message_type;
 };
 
+void
+print_data(const unsigned char *data, size_t data_len)
+{
+  for (int i = 0; i < data_len; ++i) {
+    printf(i % 8 == 7 ? " %02x\n" : " %02x", (int)data[i]);
+  }
+  fprintf(stdout, "\n");
+}
+
+static int
+receive_data_cb(struct socket *sk, union sctp_sockstore client_addr, void *data,
+                size_t data_len, struct sctp_rcvinfo recv_info, int flags, void *udata)
+{
+  char buf[BUFFER_SIZE];
+
+  if (data) {
+    if (flags & MSG_NOTIFICATION) {
+      printf("Notification of length %zu received.\n", data_len);
+    } else {
+      printf("Data of length %zu received from %s:%u on stream %u with SSN %u, TSN %u, PPID %u\n",
+             data_len,
+             inet_ntop(AF_INET, &client_addr.sin.sin_addr, buf, sizeof buf),
+             ntohs(client_addr.sin.sin_port),
+             ntohs(recv_info.rcv_sid),
+             ntohs(recv_info.rcv_ssn),
+             ntohl(recv_info.rcv_tsn),
+             ntohl(recv_info.rcv_ppid));
+      print_data((const unsigned char *)data, data_len);
+    }
+    free(data);
+  }
+
+  return 1; // ?
+}
+
 int main(int argc, char *argv[])
 {
   if (argc != 5) {
@@ -58,7 +93,7 @@ int main(int argc, char *argv[])
   usrsctp_init(atoi(argv[1]));
   usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
 
-  struct socket *sk = usrsctp_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP, NULL, NULL, 0, NULL);
+  struct socket *sk = usrsctp_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP, receive_data_cb, NULL, 0, NULL);
   if (sk == NULL) {
     fprintf(stderr, "socket error\n");
     return -1;
@@ -86,21 +121,8 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  char buf[BUFFER_SIZE];
-  struct sockaddr_in client_address;
-  int addr_len;
-  struct sctp_rcvinfo info;
-  int info_len;
-  unsigned int info_type;
-  int message_flags;
   while (1) {
-    addr_len = sizeof client_address;
-    info_len = sizeof info;
-    info_type = 0;
-    message_flags = 0;
-
-    int nbytes = usrsctp_recvv(sk, buf, sizeof buf, (struct sockaddr *)&client_address, (socklen_t *)&addr_len,
-                               &info, (socklen_t *)&info_len, &info_type, &message_flags);
+    sleep(10);
   }
 
   usrsctp_close(sk);
