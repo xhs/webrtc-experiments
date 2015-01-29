@@ -3,9 +3,36 @@
   <title>RTCDataChannel</title>
 </head>
 <body>
+  <div>
+    <label>Remote Answer</label>
+    <br>
+    <textarea id="answer" style="width:300px;height:100px;">
+    </textarea>
+    <br>
+    <button id="answer-btn">Add Answer</button>
+  </div>
+  <div>
+    <label>Remote Candidate</label>
+    <br>
+    <textarea id="candidate" style="width:300px;height:100px;">
+    </textarea>
+    <br>
+    <button id="candidate-btn">Add Answer</button>
+  </div>
+  <script type="text/javascript" src="/lab/vendor/jquery.min.js"></script>
   <script type="text/javascript">
-    void function() {
-      var PeerConnection = webkitRTCPeerConnection || mozRTCPeerConnection
+    if (typeof String.prototype.startsWith != 'function') {
+      String.prototype.startsWith = function (str){
+        return this.indexOf(str) == 0
+      }
+    }
+
+    $(document).ready(function() {
+      var sdp = '';
+
+      var PeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection
+      var IceCandidate = window.RTCIceCandidate || window.webkitRTCIceCandidate || window.mozRTCIceCandidate
+      var SessionDescription =  window.RTCSessionDescription || window.webkitRTCSessionDescription || window.mozRTCSessionDescription
       var config = null
       var options = {
         optional: [
@@ -13,8 +40,15 @@
         ]
       }
 
+      var handleSuccess = function() {
+        console.log('OK')
+      }
+      var handleError = function(err) {
+        console.error(err)
+      }
+
       var localPeer = new PeerConnection(config, options)
-      var remotePeer = new PeerConnection(config, options)
+      // var remotePeer = new PeerConnection(config, options)
 
       var channel = localPeer.createDataChannel('foobar', {reliable: false})
       channel.onopen = function() {
@@ -26,43 +60,82 @@
         if (evt.candidate) {
           console.log('Local ICE candidate')
           console.log(evt.candidate)
-          remotePeer.addIceCandidate(evt.candidate)
+          var cand = evt.candidate.candidate.replace(/udp/, 'UDP')
+          sdp += 'a=' + cand + '\n'
+          console.log(sdp)
+          console.log(btoa(sdp))
+          // remotePeer.addIceCandidate(evt.candidate)
         }
       }
 
-      remotePeer.onicecandidate = function(evt) {
-        if (evt.candidate) {
-          console.log('Remote ICE candidate')
-          console.log(evt.candidate)
-          localPeer.addIceCandidate(evt.candidate)
-        }
-      }
+      // remotePeer.onicecandidate = function(evt) {
+      //   if (evt.candidate) {
+      //     console.log('Remote ICE candidate')
+      //     console.log(evt.candidate)
+      //     localPeer.addIceCandidate(evt.candidate)
+      //   }
+      // }
 
-      remotePeer.ondatachannel = function(evt) {
-        console.log('Channel event')
-        console.log(evt)
-        var ch = evt.channel
-        ch.onopen = function() {
-          console.log('Remote channel opened')
-        }
-        ch.onmessage = function(evt) {
-          console.log('Received: ' + evt.data)
-        }
-      }
+      // remotePeer.ondatachannel = function(evt) {
+      //   console.log('Channel event')
+      //   console.log(evt)
+      //   var ch = evt.channel
+      //   ch.onopen = function() {
+      //     console.log('Remote channel opened')
+      //   }
+      //   ch.onmessage = function(evt) {
+      //     console.log('Received: ' + evt.data)
+      //   }
+      // }
 
       localPeer.createOffer(function(offer) {
         console.log('Local Offer:')
         console.log(offer)
+        
+        var outputList = []
+        var sdpList = offer.sdp.split('\r\n')
+        for (var i = 0, j = sdpList.length - 1; i < j; i++) {
+          var line = sdpList[i]
+          if (line.startsWith('c=')
+              || line.startsWith('m=')
+              || line.startsWith('a=ice-ufrag')
+              || line.startsWith('a=ice-pwd')) {
+            outputList.push(line)
+          }
+        }
+        outputList.push('')
+        sdp = outputList.join('\n')
+        console.log(sdp)
+
         localPeer.setLocalDescription(offer)
-        remotePeer.setRemoteDescription(offer)
-        remotePeer.createAnswer(function(answer) {
-          console.log('Remote Answer:')
-          console.log(answer)
-          remotePeer.setLocalDescription(answer)
-          localPeer.setRemoteDescription(answer)
+        // remotePeer.setRemoteDescription(offer)
+        // remotePeer.createAnswer(function(answer) {
+        //   console.log('Remote Answer:')
+        //   console.log(answer)
+        //   remotePeer.setLocalDescription(answer)
+        //   localPeer.setRemoteDescription(answer)
+        // })
+
+        $('#answer-btn').click(function() {
+          var answer64 = $('#answer').val()
+          var answerStr = atob(answer64)
+          console.log('answer: ' + answerStr)
+
+          var answer = new SessionDescription({'type': 'answer', 'sdp': answerStr})
+          localPeer.setRemoteDescription(answer, handleSuccess, handleError)
+        })
+
+        $('#candidate-btn').click(function() {
+          var candidateStr = $('#candidate').val()
+          var candidate = new RTCIceCandidate({
+            'sdpMLineIndex': 0,
+            'sdpMid': 'data',
+            'candidate': candidateStr
+          })
+          localPeer.addIceCandidate(candidate, handleSuccess, handleError)
         })
       })
-    }()
+    })
   </script>
 </body>
 </html>

@@ -1,0 +1,64 @@
+<html>
+<head>
+  <title>RTCDataChannel</title>
+</head>
+<body>
+  <script type="text/javascript">
+    void function() {
+      var PeerConnection = webkitRTCPeerConnection || mozRTCPeerConnection
+      var config = null
+      var options = {
+        optional: [
+          {DtlsSrtpKeyAgreement: true},
+          {RtpDataChannels: true}
+        ]
+      }
+
+      var localPeer = new PeerConnection(config, options)
+      var remotePeer = new PeerConnection(config, options)
+
+      var channel = localPeer.createDataChannel('foobar', {reliable: false})
+      channel.onopen = function() {
+        console.log('Local channel opened')
+        channel.send('hello, world!')
+      }
+
+      localPeer.onicecandidate = function(evt) {
+        if (evt.candidate) {
+          console.log('Local ICE candidate event:\n' + JSON.stringify(evt.candidate))
+          remotePeer.addIceCandidate(evt.candidate)
+        }
+      }
+
+      remotePeer.onicecandidate = function(evt) {
+        if (evt.candidate) {
+          console.log('Remote ICE candidate event:\n' + JSON.stringify(evt.candidate))
+          localPeer.addIceCandidate(evt.candidate)
+        }
+      }
+
+      remotePeer.ondatachannel = function(evt) {
+        console.log('Channel event:\n' + JSON.stringify(evt.channel))
+        var ch = evt.channel
+        ch.onopen = function() {
+          console.log('Remote channel opened')
+        }
+        ch.onmessage = function(evt) {
+          console.log('Received: ' + evt.data)
+        }
+      }
+
+      localPeer.createOffer(function(offer) {
+        console.log('Local Offer:\n' + JSON.stringify(offer.sdp))
+        localPeer.setLocalDescription(offer)
+        remotePeer.setRemoteDescription(offer)
+        remotePeer.createAnswer(function(answer) {
+          console.log('Remote Answer:\n' + JSON.stringify(answer.sdp))
+          remotePeer.setLocalDescription(answer)
+          localPeer.setRemoteDescription(answer)
+        })
+      })
+    }()
+  </script>
+</body>
+</html>

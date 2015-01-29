@@ -4,6 +4,10 @@ from bottle import Bottle, static_file, run
 
 app = Bottle()
 
+@app.route('/lab/dc')
+def dc():
+  return static_file('dc.html', root='./')
+
 @app.route('/lab/datachannel')
 def datachannel():
   return static_file('rtcdatachannel.html', root='./')
