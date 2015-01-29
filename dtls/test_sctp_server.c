@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
   listen_address.sin_port = htons(atoi(argv[4]));
 
   if (usrsctp_bind(sk, (struct sockaddr *)&listen_address, sizeof listen_address) < 0) {
-    fprintf(stderr, "connect error\n");
+    fprintf(stderr, "bind error\n");
     return -1;
   }
 

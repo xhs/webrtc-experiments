@@ -81,8 +81,22 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  const char data[] = "hello";
-  usrsctp_sendv(sk, data, strlen(data), NULL, 0, NULL, 0, SCTP_SENDV_NOINFO, 0);
+  struct webrtc_dcep_open_message open_req;
+  memset(&open_req, 0, sizeof open_req);
+  open_req.message_type = DATA_CHANNEL_OPEN;
+  open_req.channel_type = DATA_CHANNEL_RELIABLE_UNORDERED;
+
+  struct sctp_sndinfo send_info;
+  memset(&send_info, 0, sizeof send_info);
+  send_info.snd_sid = 0;
+  send_info.snd_ppid = htonl(DATA_CHANNEL_PPID_CONTROL);
+
+  int nbytes = usrsctp_sendv(sk, &open_req, sizeof open_req, NULL, 0,
+                             &send_info, sizeof send_info, SCTP_SENDV_SNDINFO, 0);
+  if (nbytes < 0) {
+    fprintf(stderr, "send error\n");
+    return -1;
+  }
 
   usrsctp_close(sk);
   while (usrsctp_finish() != 0);
