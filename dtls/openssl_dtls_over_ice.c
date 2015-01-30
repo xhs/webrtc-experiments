@@ -150,8 +150,7 @@ data_received_cb(NiceAgent *agent, guint stream_id, guint component_id,
   if (candidate_negotiation_done) {
     g_mutex_lock(&ssl_mutex);
     fprintf(stderr, "[ice] received encrypted data of length %u from wire\n", len);
-    int written = BIO_write(dtls->incoming_bio, buf, len);
-    fprintf(stderr, "%d bytes written\n", written);
+    BIO_write(dtls->incoming_bio, buf, len);
 
     if (SSL_is_init_finished(dtls->ssl) != 1) {
       fprintf(stderr, "continue handshake\n");
@@ -291,8 +290,7 @@ ice_thread(gpointer user_data)
       int nbytes = BIO_read(dtls->outgoing_bio, buf, sizeof buf);
       fprintf(stderr, "[ice] received encrypted data of length %d from dtls\n", nbytes);
       if (nbytes > 0) {
-        int sent = nice_agent_send(agent, stream_id, 1, nbytes, buf);
-        fprintf(stderr, "%d bytes sent\n", sent);
+        nice_agent_send(agent, stream_id, 1, nbytes, buf);
       }
 
       if (SSL_is_init_finished(dtls->ssl) != 1) {
