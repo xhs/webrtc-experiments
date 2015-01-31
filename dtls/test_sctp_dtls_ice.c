@@ -1,4 +1,4 @@
-// gcc -o test_sctp_dtls_ice test_sctp_dtls_ice.c `pkg-config --cflags --libs openssl nice` -lusrsctp
+// gcc -DSCTP_DEBUG -o test_sctp_dtls_ice test_sctp_dtls_ice.c `pkg-config --cflags --libs openssl nice` -lusrsctp
 
 #include <poll.h>
 #include <sys/types.h>
@@ -358,6 +358,20 @@ sctp_thread(gpointer user_data)
   struct sctp_transport *sctp = pc->sctp;
   char buf[BUFFER_SIZE];
 
+  while (!exit_thread && !candidate_negotiation_done) {
+    g_usleep(10000);
+  }
+
+  if (pc->role == PEER_CLIENT) {
+    // connect...
+  } else {
+    usrsctp_listen(sctp->sk, 1);
+  }
+
+  while (!exit_thread && SSL_is_init_finished(dtls->ssl) != 1) {
+    g_usleep(10000);
+  }
+
   while (!exit_thread) {
     if (BIO_ctrl_pending(sctp->incoming_bio) <= 0 && BIO_ctrl_pending(sctp->outgoing_bio) <= 0) {
       g_usleep(5000);
@@ -411,7 +425,6 @@ sctp_data_received_cb(struct socket *sock, union sctp_sockstore addr, void *data
                       size_t len, struct sctp_rcvinfo recv_info, int flags, void *user_data)
 {
   fprintf(stderr, "[sctp] data received:\n");
-  print_binary((unsigned char *)data, (int)len);
   return 0;
 }
 
@@ -452,6 +465,7 @@ main(int argc, char *argv[])
   init_dtls_transport(context, pc);
 
   usrsctp_init(0, sctp_data_ready_cb, NULL);
+  // usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
   usrsctp_register_address(sctp);
   usrsctp_sysctl_set_sctp_ecn_enable(0);
   struct socket *sock = usrsctp_socket(AF_CONN, SOCK_STREAM, IPPROTO_SCTP,
