@@ -59,11 +59,9 @@
       localPeer.onicecandidate = function(evt) {
         if (evt.candidate) {
           console.log('Local ICE candidate')
-          console.log(evt.candidate)
           var cand = evt.candidate.candidate.replace(/udp/, 'UDP')
-          sdp += 'a=' + cand + '\n'
-          console.log(sdp)
-          console.log(btoa(sdp))
+          cand = 'a=' + cand + '\n'
+          console.log(cand)
           // remotePeer.addIceCandidate(evt.candidate)
         }
       }
@@ -91,21 +89,10 @@
       localPeer.createOffer(function(offer) {
         console.log('Local Offer:')
         console.log(offer)
-        
-        var outputList = []
-        var sdpList = offer.sdp.split('\r\n')
-        for (var i = 0, j = sdpList.length - 1; i < j; i++) {
-          var line = sdpList[i]
-          if (line.startsWith('c=')
-              || line.startsWith('m=')
-              || line.startsWith('a=ice-ufrag')
-              || line.startsWith('a=ice-pwd')) {
-            outputList.push(line)
-          }
-        }
-        outputList.push('')
-        sdp = outputList.join('\n')
+
+        sdp = offer.sdp.split('\r\n').join('\n')
         console.log(sdp)
+        console.log(btoa(sdp))
 
         localPeer.setLocalDescription(offer)
         // remotePeer.setRemoteDescription(offer)

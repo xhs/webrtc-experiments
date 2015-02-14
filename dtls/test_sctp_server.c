@@ -16,7 +16,6 @@
 #include <usrsctp.h>
 
 #define BUFFER_SIZE (1 << 16)
-#define SCTP_DEBUG_NONE 0
 
 #define DATA_CHANNEL_PPID_CONTROL      50
 #define DATA_CHANNEL_PPID_STRING       51
@@ -61,23 +60,18 @@ static int
 receive_data_cb(struct socket *sk, union sctp_sockstore client_addr, void *data,
                 size_t data_len, struct sctp_rcvinfo recv_info, int flags, void *udata)
 {
-  char buf[BUFFER_SIZE];
-
   if (data) {
     if (flags & MSG_NOTIFICATION) {
       printf("Notification of length %zu received.\n", data_len);
     } else {
-      printf("Data of length %zu received from %s:%u on stream %u with SSN %u, TSN %u, PPID %u\n",
+      printf("Data of length %zu received on stream %u with SSN %u, TSN %u, PPID %u\n",
              data_len,
-             inet_ntop(AF_INET, &client_addr.sin.sin_addr, buf, sizeof buf),
-             ntohs(client_addr.sin.sin_port),
              ntohs(recv_info.rcv_sid),
              ntohs(recv_info.rcv_ssn),
              ntohl(recv_info.rcv_tsn),
              ntohl(recv_info.rcv_ppid));
       print_data((const unsigned char *)data, data_len);
     }
-    free(data);
   }
 
   return 1; // ?
@@ -90,7 +84,7 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  usrsctp_init(atoi(argv[1]));
+  usrsctp_init(atoi(argv[1]), NULL, NULL);
   usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
 
   struct socket *sk = usrsctp_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP, receive_data_cb, NULL, 0, NULL);

@@ -16,7 +16,6 @@
 #include <usrsctp.h>
 
 #define BUFFER_SIZE (1 << 16)
-#define SCTP_DEBUG_NONE 0
 
 #define DATA_CHANNEL_PPID_CONTROL      50
 #define DATA_CHANNEL_PPID_STRING       51
@@ -55,7 +54,7 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  usrsctp_init(atoi(argv[1]));
+  usrsctp_init(atoi(argv[1]), NULL, NULL);
   usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
 
   struct socket *sk = usrsctp_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP, NULL, NULL, 0, NULL);

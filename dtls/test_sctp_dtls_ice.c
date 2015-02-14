@@ -1,4 +1,4 @@
-// gcc -DSCTP_DEBUG -o test_sctp_dtls_ice test_sctp_dtls_ice.c `pkg-config --cflags --libs openssl nice` -lusrsctp
+// gcc -o test_sctp_dtls_ice test_sctp_dtls_ice.c `pkg-config --cflags --libs openssl nice` -lusrsctp
 
 #include <poll.h>
 #include <sys/types.h>
@@ -465,7 +465,6 @@ main(int argc, char *argv[])
   init_dtls_transport(context, pc);
 
   usrsctp_init(0, sctp_data_ready_cb, NULL);
-  // usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
   usrsctp_register_address(sctp);
   usrsctp_sysctl_set_sctp_ecn_enable(0);
   struct socket *sock = usrsctp_socket(AF_CONN, SOCK_STREAM, IPPROTO_SCTP,
