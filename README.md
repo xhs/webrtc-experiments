@@ -1,2 +1,2 @@
 
-Some WebRTC experiments in any language.
+Some WebRTC experiments
