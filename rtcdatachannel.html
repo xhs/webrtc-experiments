@@ -50,10 +50,14 @@
       var localPeer = new PeerConnection(config, options)
       // var remotePeer = new PeerConnection(config, options)
 
-      var channel = localPeer.createDataChannel('foobar', {reliable: false})
-      channel.onopen = function() {
-        console.log('Local channel opened')
-        channel.send('hello, world!')
+      var foo = localPeer.createDataChannel('foo', {reliable: true})
+      foo.onopen = function() {
+        foo.send('hello, foo!')
+      }
+
+      var bar = localPeer.createDataChannel('bar', {reliable: true})
+      bar.onopen = function() {
+        bar.send('hello, bar!')
       }
 
       localPeer.onicecandidate = function(evt) {

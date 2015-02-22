@@ -1,4 +1,4 @@
-// gcc -DSCTP_DEBUG -o test_sctp_client test_sctp_client.c -I/usr/local/include -L/usr/local/lib -lusrsctp
+// gcc -DINET -DINET6 -DSCTP_DEBUG -o test_sctp_client test_sctp_client.c -I/usr/local/include -L/usr/local/lib -lusrsctp
 
 #include <poll.h>
 #include <sys/types.h>
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
   struct sctp_sndinfo send_info;
   memset(&send_info, 0, sizeof send_info);
-  send_info.snd_sid = 0;
+  send_info.snd_sid = 3;
   send_info.snd_ppid = htonl(DATA_CHANNEL_PPID_CONTROL);
 
   int nbytes = usrsctp_sendv(sk, &open_req, sizeof open_req, NULL, 0,

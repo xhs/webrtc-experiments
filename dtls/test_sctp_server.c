@@ -1,4 +1,4 @@
-// gcc -DSCTP_DEBUG -o test_sctp_server test_sctp_server.c -I/usr/local/include -L/usr/local/lib -lusrsctp
+// gcc -DINET -DINET6 -DSCTP_DEBUG -o test_sctp_server test_sctp_server.c -I/usr/local/include -L/usr/local/lib -lusrsctp
 
 #include <poll.h>
 #include <sys/types.h>
@@ -47,6 +47,8 @@ struct __attribute__((packed, aligned(1))) webrtc_dcep_ack_message {
   uint8_t message_type;
 };
 
+int running;
+
 void
 print_data(const unsigned char *data, size_t data_len)
 {
@@ -66,15 +68,18 @@ receive_data_cb(struct socket *sk, union sctp_sockstore client_addr, void *data,
     } else {
       printf("Data of length %zu received on stream %u with SSN %u, TSN %u, PPID %u\n",
              data_len,
-             ntohs(recv_info.rcv_sid),
-             ntohs(recv_info.rcv_ssn),
-             ntohl(recv_info.rcv_tsn),
+             recv_info.rcv_sid,
+             recv_info.rcv_ssn,
+             recv_info.rcv_tsn,
              ntohl(recv_info.rcv_ppid));
       print_data((const unsigned char *)data, data_len);
     }
   }
 
-  return 1; // ?
+  free(data);
+  running = 0;
+
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -115,8 +120,9 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  while (1) {
-    sleep(10);
+  running = 1;
+  while (running) {
+    sleep(100);
   }
 
   usrsctp_close(sk);
