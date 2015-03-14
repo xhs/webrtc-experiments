@@ -60,6 +60,11 @@
         bar.send('hello, bar!')
       }
 
+      bar.onmessage = function(evt) {
+        console.log('received: ' + evt.data)
+        bar.close()
+      }
+
       localPeer.onicecandidate = function(evt) {
         if (evt.candidate) {
           console.log('Local ICE candidate')
@@ -94,7 +99,7 @@
         console.log('Local Offer:')
         console.log(offer)
 
-        sdp = offer.sdp.split('\r\n').join('\n')
+        sdp = offer.sdp
         console.log(sdp)
         console.log(btoa(sdp))
 
